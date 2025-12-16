@@ -1,23 +1,27 @@
 {
   "name": "our-journey---birthday-wish",
+  "homepage": "https://Souvik0001.github.io/Birthday_Website/",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
-    "three": "0.160.0",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "@react-three/fiber": "8.15.16",
     "@react-three/drei": "9.99.0",
+    "@react-three/fiber": "8.15.16",
+    "@react-three/postprocessing": "2.16.2",
     "framer-motion": "11.0.3",
+    "gh-pages": "^6.3.0",
     "gsap": "3.12.5",
     "lucide-react": "0.344.0",
-    "@react-three/postprocessing": "2.16.2"
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "three": "0.160.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

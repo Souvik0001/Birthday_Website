@@ -419,14 +419,26 @@ export default function App() {
 
   const defaultAudioSrc = PASTE_YOUR_GITHUB_LINK_HERE || "https://cdn.pixabay.com/audio/2022/10/18/audio_31c2730e64.mp3";
 
+//   useEffect(() => {
+//     // Attempt playback if audio ref is available and we have started
+//     if (audioRef.current && started && !muted) {
+//         audioRef.current.play().catch(e => {
+//             console.warn("Playback failed:", e);
+//         });
+//     }
+//   }, [started, userAudioSrc, muted]);
   useEffect(() => {
-    // Attempt playback if audio ref is available and we have started
-    if (audioRef.current && started && !muted) {
-        audioRef.current.play().catch(e => {
-            console.warn("Playback failed:", e);
-        });
-    }
-  }, [started, userAudioSrc, muted]);
+  const audio = audioRef.current;
+  if (!audio) return;
+
+  audio.muted = muted;
+
+  if (started && !muted) {
+    audio.play().catch(() => {
+      // autoplay blocked – expected on first load
+    });
+  }
+}, [started, userAudioSrc, muted]);
 
   const handleStart = async () => {
     setStarted(true);

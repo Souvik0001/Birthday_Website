@@ -245,8 +245,8 @@ const ScrollListener = ({ setIndex, onFirstScroll, }: { setIndex: (i: number) =>
     const offset = scroll.offset;
 
     // Detect first user scroll
-    if (offset > 0 && lastIndex.current === -1) {
-        onFirstScroll();
+    if (offset > 0) {
+      onFirstScroll();
     }
 
     const idx = Math.min(Math.round(offset * total), total);
@@ -260,7 +260,13 @@ const ScrollListener = ({ setIndex, onFirstScroll, }: { setIndex: (i: number) =>
 }
 
 
-const StoryOverlay = ({ forceVisible }: { forceVisible: boolean }) => {
+const StoryOverlay = ({
+  scrollPhase,
+  onFadeComplete,
+}: {
+  scrollPhase: 'intro' | 'fading' | 'normal';
+  onFadeComplete: () => void;
+}) => {
     const scroll = useScroll();
     const [opacity, setOpacity] = useState(1);
     
@@ -286,29 +292,43 @@ const StoryOverlay = ({ forceVisible }: { forceVisible: boolean }) => {
     //     setOpacity(op);
     // });
     useFrame(() => {
-    // FORCE text visible until first scroll
-    if (forceVisible) {
-        setOpacity(1);
-        return;
-    }
+  // Phase 1: Show text initially
+  if (scrollPhase === 'intro') {
+    setOpacity(1);
+    return;
+  }
 
-    const total = STORY_CHAPTERS.length - 1;
-    const currentPos = scroll.offset * total;
-    const fraction = currentPos % 1;
+  // Phase 2: Fade out on first scroll
+  if (scrollPhase === 'fading') {
+    setOpacity((prev) => {
+      const next = Math.max(prev - 0.05, 0);
+      if (next === 0) {
+        onFadeComplete();
+      }
+      return next;
+    });
+    return;
+  }
 
-    let op = 1;
-    if (fraction < 0.2) {
-        op = fraction / 0.2;
-    } else if (fraction > 0.8) {
-        op = (1 - fraction) / 0.2;
-    }
+  // Phase 3: Normal chapter-based fade logic
+  const total = STORY_CHAPTERS.length - 1;
+  const currentPos = scroll.offset * total;
+  const fraction = currentPos % 1;
 
-    if (currentPos > total - 0.5) {
-        op = 1;
-    }
+  let op = 1;
+  if (fraction < 0.2) {
+    op = fraction / 0.2;
+  } else if (fraction > 0.8) {
+    op = (1 - fraction) / 0.2;
+  }
 
-    setOpacity(op);
+  if (currentPos > total - 0.5) {
+    op = 1;
+  }
+
+  setOpacity(op);
 });
+
 
 
     return (
@@ -448,7 +468,7 @@ const StartScreen = ({ onStart }: { onStart: () => void }) => {
 export default function App() {
   const [started, setStarted] = useState(false);
   const [chapterIndex, setChapterIndex] = useState(0);
-  const [hasScrolled, setHasScrolled] = useState(false);
+  const [scrollPhase, setScrollPhase] = useState<'intro' | 'fading' | 'normal'>('intro');
   const [muted, setMuted] = useState(false);
   const [audioError, setAudioError] = useState(false);
   const [userAudioSrc, setUserAudioSrc] = useState<string | null>(null);
@@ -583,12 +603,19 @@ export default function App() {
                     <ScrollControls pages={STORY_CHAPTERS.length} damping={0.4} distance={1}>
                         <Experience currentChapter={chapterIndex} />
                         <ScrollListener
-                            setIndex={setChapterIndex}
-                            onFirstScroll={() => setHasScrolled(true)}
+                          setIndex={setChapterIndex}
+                          onFirstScroll={() => {
+                            setScrollPhase((prev) =>
+                              prev === 'intro' ? 'fading' : prev
+                            );
+                          }}
                         />
 
                         <Scroll html>
-                            <StoryOverlay forceVisible={!hasScrolled} />
+                            <StoryOverlay
+                               scrollPhase={scrollPhase}
+                               onFadeComplete={() => setScrollPhase('normal')}
+                             />
                         </Scroll>
                     </ScrollControls>
                     

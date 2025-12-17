@@ -228,46 +228,88 @@ const Experience = ({ currentChapter }: { currentChapter: number }) => {
     );
 };
 
-const ScrollListener = ({ setIndex }: { setIndex: (i: number) => void }) => {
+const ScrollListener = ({ setIndex, onFirstScroll, }: { setIndex: (i: number) => void; onFirstScroll: () => void; }) => {
     const scroll = useScroll();
     const lastIndex = useRef(-1);
     
+    // useFrame(() => {
+    //     const total = STORY_CHAPTERS.length - 1;
+    //     const idx = Math.min(Math.round(scroll.offset * total), total);
+    //     if (lastIndex.current !== idx) {
+    //         lastIndex.current = idx;
+    //         setIndex(idx);
+    //     }
+    // });
     useFrame(() => {
-        const total = STORY_CHAPTERS.length - 1;
-        const idx = Math.min(Math.round(scroll.offset * total), total);
-        if (lastIndex.current !== idx) {
-            lastIndex.current = idx;
-            setIndex(idx);
-        }
-    });
+    const total = STORY_CHAPTERS.length - 1;
+    const offset = scroll.offset;
+
+    // Detect first user scroll
+    if (offset > 0 && lastIndex.current === -1) {
+        onFirstScroll();
+    }
+
+    const idx = Math.min(Math.round(offset * total), total);
+    if (lastIndex.current !== idx) {
+        lastIndex.current = idx;
+        setIndex(idx);
+    }
+});
+
     return null;
 }
 
-const StoryOverlay = () => {
+
+const StoryOverlay = ({ forceVisible }: { forceVisible: boolean }) => {
     const scroll = useScroll();
     const [opacity, setOpacity] = useState(1);
     
-    useFrame(() => {
-        const total = STORY_CHAPTERS.length - 1;
-        const currentPos = scroll.offset * total;
-        const fraction = currentPos % 1;
+    // useFrame(() => {
+    //     const total = STORY_CHAPTERS.length - 1;
+    //     const currentPos = scroll.offset * total;
+    //     const fraction = currentPos % 1;
         
-        let op = 1;
-        if (fraction < 0.2) {
-            op = fraction / 0.2; // Fade in
-        } else if (fraction > 0.8) {
-            op = (1 - fraction) / 0.2; // Fade out
-        } else {
-            op = 1; // Stay visible
-        }
+    //     let op = 1;
+    //     if (fraction < 0.2) {
+    //         op = fraction / 0.2; // Fade in
+    //     } else if (fraction > 0.8) {
+    //         op = (1 - fraction) / 0.2; // Fade out
+    //     } else {
+    //         op = 1; // Stay visible
+    //     }
 
-        // Fix: Keep text visible at the very end of the scroll
-        if (currentPos > total - 0.5) {
-            op = 1;
-        }
+    //     // Fix: Keep text visible at the very end of the scroll
+    //     if (currentPos > total - 0.5) {
+    //         op = 1;
+    //     }
         
-        setOpacity(op);
-    });
+    //     setOpacity(op);
+    // });
+    useFrame(() => {
+    // FORCE text visible until first scroll
+    if (forceVisible) {
+        setOpacity(1);
+        return;
+    }
+
+    const total = STORY_CHAPTERS.length - 1;
+    const currentPos = scroll.offset * total;
+    const fraction = currentPos % 1;
+
+    let op = 1;
+    if (fraction < 0.2) {
+        op = fraction / 0.2;
+    } else if (fraction > 0.8) {
+        op = (1 - fraction) / 0.2;
+    }
+
+    if (currentPos > total - 0.5) {
+        op = 1;
+    }
+
+    setOpacity(op);
+});
+
 
     return (
         <div className="w-full relative">
@@ -406,6 +448,7 @@ const StartScreen = ({ onStart }: { onStart: () => void }) => {
 export default function App() {
   const [started, setStarted] = useState(false);
   const [chapterIndex, setChapterIndex] = useState(0);
+  const [hasScrolled, setHasScrolled] = useState(false);
   const [muted, setMuted] = useState(false);
   const [audioError, setAudioError] = useState(false);
   const [userAudioSrc, setUserAudioSrc] = useState<string | null>(null);
@@ -539,9 +582,13 @@ export default function App() {
                 <Suspense fallback={null}>
                     <ScrollControls pages={STORY_CHAPTERS.length} damping={0.4} distance={1}>
                         <Experience currentChapter={chapterIndex} />
-                        <ScrollListener setIndex={setChapterIndex} />
+                        <ScrollListener
+                            setIndex={setChapterIndex}
+                            onFirstScroll={() => setHasScrolled(true)}
+                        />
+
                         <Scroll html>
-                            <StoryOverlay />
+                            <StoryOverlay forceVisible={!hasScrolled} />
                         </Scroll>
                     </ScrollControls>
                     
